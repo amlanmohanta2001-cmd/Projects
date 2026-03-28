@@ -110,14 +110,22 @@ public class CarbonService {
     }
 
     /**
-     * Maps user-friendly transport type names to Carbon Interface API identifiers.
+     * Maps user-friendly transport type names to API identifiers.
      * 
-     * The API expects specific identifiers for different transport methods.
      * This method converts from user-facing names (shown in the UI dropdown)
-     * to the API identifiers.
+     * to the API identifiers used internally.
      * 
-     * @param userFriendlyType The transport type as shown in the UI (e.g., "Small Car", "Large Car", "Bus", "Flight")
-     * @return The corresponding API identifier (e.g., "small_car", "large_car", "bus", "flight")
+     * Supported Transport Types:
+     * - Small Car → small_car (0.25 kg CO₂e/km)
+     * - Large Car → large_car (0.31 kg CO₂e/km)
+     * - Bus → bus (0.08 kg CO₂e/km per passenger)
+     * - Flight → flight (0.15 kg CO₂e/km per passenger)
+     * - Electric Car → electric_car (0.05 kg CO₂e/km)
+     * - Electric Bike → electric_bike (0.01 kg CO₂e/km)
+     * - Train → train (0.04 kg CO₂e/km per passenger)
+     * 
+     * @param userFriendlyType The transport type as shown in the UI
+     * @return The corresponding API identifier
      * @throws IllegalArgumentException if the transport type is not recognized
      */
     public static String mapTransportType(String userFriendlyType) {
@@ -135,10 +143,16 @@ public class CarbonService {
                 return "bus";
             case "flight":
                 return "flight";
+            case "electric car":
+                return "electric_car";
+            case "electric bike":
+                return "electric_bike";
+            case "train":
+                return "train";
             default:
                 throw new IllegalArgumentException(
                     "Unknown transport type: " + userFriendlyType + 
-                    ". Supported types: Small Car, Large Car, Bus, Flight"
+                    ". Supported types: Small Car, Large Car, Bus, Flight, Electric Car, Electric Bike, Train"
                 );
         }
     }

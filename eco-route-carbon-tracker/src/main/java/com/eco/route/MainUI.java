@@ -77,7 +77,7 @@ public class MainUI extends JFrame {
 
         // Transport type input
         JLabel transportLabel = new JLabel("Transport Type:");
-        String[] transportTypes = {"Small Car", "Large Car", "Bus", "Flight"};
+        String[] transportTypes = {"Small Car", "Large Car", "Bus", "Flight", "Electric Car", "Electric Bike", "Train"};
         transportTypeCombo = new JComboBox<>(transportTypes);
         transportTypeCombo.setFont(new Font("Arial", Font.PLAIN, 14));
         inputPanel.add(transportLabel);

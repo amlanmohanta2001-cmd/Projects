@@ -22,10 +22,13 @@ package com.eco.route;
 public class ApiClient {
 
     // Emission factors in kg CO2e per kilometer (based on EPA data)
-    private static final double SMALL_CAR_FACTOR = 0.25;   // grams CO2/km
-    private static final double LARGE_CAR_FACTOR = 0.31;   // grams CO2/km
-    private static final double BUS_FACTOR = 0.08;         // grams CO2/km per passenger
-    private static final double FLIGHT_FACTOR = 0.15;      // grams CO2/km per passenger
+    private static final double SMALL_CAR_FACTOR = 0.25;       // kg CO2e/km - Average sedan
+    private static final double LARGE_CAR_FACTOR = 0.31;       // kg CO2e/km - SUVs and larger vehicles
+    private static final double BUS_FACTOR = 0.08;             // kg CO2e/km per passenger (~40 passengers)
+    private static final double FLIGHT_FACTOR = 0.15;          // kg CO2e/km per passenger - Average flight
+    private static final double ELECTRIC_CAR_FACTOR = 0.05;    // kg CO2e/km - Depends on grid electricity mix
+    private static final double ELECTRIC_BIKE_FACTOR = 0.01;   // kg CO2e/km - Minimal grid electricity
+    private static final double TRAIN_FACTOR = 0.04;           // kg CO2e/km per passenger - Efficient rail transport
 
     /**
      * Constructor: Initializes the ApiClient.
@@ -79,10 +82,19 @@ public class ApiClient {
             case "flight":
                 emissionFactor = FLIGHT_FACTOR;
                 break;
+            case "electric_car":
+                emissionFactor = ELECTRIC_CAR_FACTOR;
+                break;
+            case "electric_bike":
+                emissionFactor = ELECTRIC_BIKE_FACTOR;
+                break;
+            case "train":
+                emissionFactor = TRAIN_FACTOR;
+                break;
             default:
                 throw new IllegalArgumentException(
                     "Unknown transport type: " + transportType + 
-                    ". Supported types: small_car, large_car, bus, flight"
+                    ". Supported types: small_car, large_car, bus, flight, electric_car, electric_bike, train"
                 );
         }
 
