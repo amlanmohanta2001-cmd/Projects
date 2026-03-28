@@ -1,33 +1,61 @@
 package com.eco.route;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * CarbonService.java - Service Layer
  * 
  * This class contains the business logic for the Eco-Route Carbon Tracker application.
- * It orchestrates API calls (via ApiClient), performs calculations, and handles
- * persistent storage of calculation history to a CSV file.
+ * It orchestrates API calls (via ApiClient), performs calculations, and manages
+ * in-app calculation history tracking.
  * 
  * Key responsibilities:
  * 1. Calculate CO2 emissions for a given distance and transport type
  * 2. Compare emissions between car types and bus for the same distance
- * 3. Save calculation results to a CSV file for historical tracking
+ * 3. Maintain calculation history in memory for in-app display
  */
 public class CarbonService {
 
-    // Instance of ApiClient to fetch emissions data from the Carbon Interface API
+    // Instance of ApiClient to fetch emissions data
     private final ApiClient apiClient;
     
-    // Path to the CSV file where calculation history is stored
-    private static final String HISTORY_FILE = "calculation_history.csv";
-    
-    // Flag to track if the CSV header has been written (to avoid duplicates)
-    private boolean csvHeaderWritten = false;
+    // In-memory list to store calculation history
+    private final List<CalculationRecord> calculationHistory;
+
+    /**
+     * Inner class to represent a single calculation record.
+     */
+    public static class CalculationRecord {
+        public final LocalDateTime timestamp;
+        public final double distance;
+        public final String transportType;
+        public final double emissions;
+        public final double busSavings;
+
+        public CalculationRecord(LocalDateTime timestamp, double distance, String transportType, 
+                                double emissions, double busSavings) {
+            this.timestamp = timestamp;
+            this.distance = distance;
+            this.transportType = transportType;
+            this.emissions = emissions;
+            this.busSavings = busSavings;
+        }
+
+        @Override
+        public String toString() {
+            return String.format(
+                "[%s] Distance: %.1f km | Type: %s | CO₂: %.2f kg | Bus Savings: %.2f kg",
+                timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                distance,
+                transportType,
+                emissions,
+                busSavings
+            );
+        }
+    }
 
     /**
      * Constructor: Initializes the CarbonService with an ApiClient instance.
@@ -36,8 +64,7 @@ public class CarbonService {
      */
     public CarbonService(ApiClient apiClient) {
         this.apiClient = apiClient;
-        // Check if CSV header already exists
-        this.csvHeaderWritten = new File(HISTORY_FILE).exists();
+        this.calculationHistory = new ArrayList<>();
     }
 
     /**
@@ -117,57 +144,69 @@ public class CarbonService {
     }
 
     /**
-     * Saves a calculation result to the CSV history file.
+     * Saves a calculation result to the in-memory history.
      * 
-     * This method appends a new row to the calculation_history.csv file with
-     * the calculation details. The file is created automatically if it doesn't exist,
-     * and a header row is written on the first write.
-     * 
-     * CSV Format (one row per calculation):
-     * timestamp,distance_km,transport_type,co2_kg,bus_savings_kg
-     * 2025-03-28T14:30:45,100.5,small_car,25.34,5.12
+     * This method stores the calculation in memory for display in the app.
+     * The history persists during the session and is displayed in the UI.
      * 
      * @param distance Distance traveled in kilometers
-     * @param transportType The user-friendly transport type name (not the API identifier)
+     * @param transportType The user-friendly transport type name
      * @param emissions CO2 emissions in kg CO2e
      * @param savings CO2 savings by taking bus instead (in kg CO2e), or 0 if not applicable
-     * @throws IOException if file writing fails
      */
-    public void logCalculationToFile(double distance, String transportType, double emissions, double savings) throws IOException {
-        try (FileWriter writer = new FileWriter(HISTORY_FILE, true)) {
-            // Write CSV header if this is the first write
-            if (!csvHeaderWritten) {
-                writer.write("timestamp,distance_km,transport_type,co2_kg,bus_savings_kg\n");
-                csvHeaderWritten = true;
-            }
-
-            // Get current timestamp in ISO 8601 format (e.g., 2025-03-28T14:30:45)
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-
-            // Build CSV row: timestamp, distance, transport type, emissions (rounded to 2 decimals), savings (rounded to 2 decimals)
-            String csvRow = String.format(
-                "%s,%.1f,%s,%.2f,%.2f%n",
-                timestamp,
-                distance,
-                transportType.toLowerCase(),
-                emissions,
-                savings
-            );
-
-            // Write the row to the CSV file
-            writer.write(csvRow);
-        }
+    public void logCalculation(double distance, String transportType, double emissions, double savings) {
+        CalculationRecord record = new CalculationRecord(
+            LocalDateTime.now(),
+            distance,
+            transportType,
+            emissions,
+            savings
+        );
+        calculationHistory.add(record);
     }
 
     /**
-     * Gets the absolute path to the calculation history CSV file.
+     * Gets the complete calculation history.
      * 
-     * This method is useful for the UI to display the file location or
-     * allow the user to view the history file.
-     * 
-     * @return The absolute file path to calculation_history.csv
+     * @return List of all CalculationRecord objects
      */
-    public String getHistoryFilePath() {
-        return new File(HISTORY_FILE).getAbsolutePath();
+    public List<CalculationRecord> getCalculationHistory() {
+        return new ArrayList<>(calculationHistory); // Return a copy to prevent external modification
+    }
+
+    /**
+     * Gets the calculation history as a formatted string for display.
+     * 
+     * @return Formatted string representation of all calculations
+     */
+    public String getHistoryAsString() {
+        if (calculationHistory.isEmpty()) {
+            return "No calculations performed yet.\nStart by entering a distance and selecting a transport type!";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("═══════════════════════════════════════════════════════════\n");
+        sb.append("                  CALCULATION HISTORY\n");
+        sb.append("═══════════════════════════════════════════════════════════\n\n");
+
+        for (int i = 0; i < calculationHistory.size(); i++) {
+            CalculationRecord record = calculationHistory.get(i);
+            sb.append(String.format("%d. %s\n", i + 1, record.toString()));
+            if (record.busSavings > 0) {
+                sb.append(String.format("   → By bus, save: %.2f kg CO₂\n", record.busSavings));
+            }
+            sb.append("\n");
+        }
+
+        sb.append("═══════════════════════════════════════════════════════════\n");
+        sb.append(String.format("Total Calculations: %d\n", calculationHistory.size()));
+        return sb.toString();
+    }
+
+    /**
+     * Clears the calculation history.
+     */
+    public void clearHistory() {
+        calculationHistory.clear();
     }
 }

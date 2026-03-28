@@ -3,7 +3,6 @@ package com.eco.route;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.io.IOException;
 
 /**
  * MainUI.java - UI Layer (Presentation Layer)
@@ -105,6 +104,17 @@ public class MainUI extends JFrame {
         viewHistoryButton.addActionListener(this::onViewHistoryButtonClicked);
         buttonPanel.add(viewHistoryButton);
 
+        // Clear History button
+        JButton clearHistoryButton = new JButton("Clear History");
+        clearHistoryButton.setFont(new Font("Arial", Font.PLAIN, 12));
+        clearHistoryButton.setPreferredSize(new Dimension(140, 40));
+        clearHistoryButton.addActionListener(ev -> {
+            carbonService.clearHistory();
+            resultsArea.setText("History cleared. Start a new calculation!");
+            showInfoDialog("Success", "Calculation history has been cleared.");
+        });
+        buttonPanel.add(clearHistoryButton);
+
         // ===== RESULTS AREA =====
         JPanel resultsPanel = new JPanel(new BorderLayout());
         resultsPanel.setBorder(BorderFactory.createTitledBorder("Results"));
@@ -166,10 +176,10 @@ public class MainUI extends JFrame {
                 );
             }
 
-            // Step 5: Log calculation to CSV file
-            carbonService.logCalculationToFile(distance, transportType, emissions, busSavings);
+            // Step 5: Log calculation to in-memory history
+            carbonService.logCalculation(distance, transportType, emissions, busSavings);
 
-            // Step 6: Display formatted results
+            // Step 6: Display formatted results with updated history
             String results = String.format(
                 "📊 CALCULATION RESULTS\n" +
                 "═══════════════════════════════════════\n" +
@@ -177,11 +187,14 @@ public class MainUI extends JFrame {
                 "Transport Type: %s\n" +
                 "CO₂ Emissions: %.2f kg CO₂e\n" +
                 "%s\n" +
-                "\n✓ Calculation saved to history file.",
+                "\n✓ Calculation saved to history.\n\n" +
+                "────────────────────────────────────────\n" +
+                "%s",
                 distance,
                 transportType,
                 emissions,
-                savingsMessage
+                savingsMessage,
+                carbonService.getHistoryAsString()
             );
 
             resultsArea.setText(results);
@@ -192,15 +205,11 @@ public class MainUI extends JFrame {
         } catch (IllegalArgumentException ex) {
             // Handle validation errors (e.g., distance <= 0)
             showErrorDialog("Invalid Input", ex.getMessage());
-        } catch (IOException ex) {
-            // Handle file writing errors (CSV logging)
-            showErrorDialog("File Error", "Failed to save calculation to history file:\n" + ex.getMessage());
         } catch (Exception ex) {
             // Handle API errors or other unexpected errors
             showErrorDialog(
                 "Calculation Error",
-                "An error occurred while calculating emissions:\n" + ex.getMessage() +
-                "\n\nPlease check your API key in the .env file and try again."
+                "An error occurred while calculating emissions:\n" + ex.getMessage()
             );
         }
     }
@@ -208,27 +217,20 @@ public class MainUI extends JFrame {
     /**
      * Action listener for the "View History" button.
      * 
-     * This method opens the calculation history CSV file in the default application
-     * (typically Excel or a text editor on Windows).
+     * This method displays the complete calculation history in the results area.
+     * Includes options to clear history if needed.
      * 
      * @param e The action event triggered by button click
      */
     private void onViewHistoryButtonClicked(ActionEvent e) {
-        try {
-            String historyPath = carbonService.getHistoryFilePath();
-            
-            // Check if the history file exists
-            java.io.File historyFile = new java.io.File(historyPath);
-            if (!historyFile.exists()) {
-                showInfoDialog("No History", "No calculation history file exists yet.\nPerform a calculation first to create it.");
-                return;
-            }
+        // Get formatted history string from the service
+        String historyText = carbonService.getHistoryAsString();
 
-            // Open the file with the default system application
-            Desktop.getDesktop().open(historyFile);
-        } catch (Exception ex) {
-            showErrorDialog("Error", "Failed to open history file:\n" + ex.getMessage());
-        }
+        // Display history in the results area
+        resultsArea.setText(historyText);
+
+        // Show confirmation message
+        showInfoDialog("History", "Displaying calculation history.\nClick 'Calculate Emissions' to return to calculation mode.");
     }
 
     /**
