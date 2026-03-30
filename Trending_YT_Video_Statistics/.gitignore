@@ -1,0 +1,25 @@
+# Data files (CSV from Kaggle - too large for repo)
+data/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+
+# OS
+.DS_Store
+Thumbs.db
